@@ -1,0 +1,11 @@
+{
+  "editor.formatOnSave": true,
+  "[lua]": {
+    "editor.defaultFormatter": "trixnz.vscode-lua"
+  },
+  "Lua.runtime.version": "Lua 5.3",
+  "Lua.diagnostics.globals": [],
+  "lua.format.indentCount": 2,
+  "lua.format.singleQuote": true,
+  "lua.targetVersion": "5.3"
+}
