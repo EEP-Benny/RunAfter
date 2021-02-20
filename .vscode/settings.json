@@ -4,7 +4,7 @@
     "editor.defaultFormatter": "trixnz.vscode-lua"
   },
   "Lua.runtime.version": "Lua 5.3",
-  "Lua.diagnostics.globals": [],
+  "Lua.diagnostics.globals": ["EXPOSE_PRIVATE_FOR_TESTING"],
   "lua.format.indentCount": 2,
   "lua.format.singleQuote": true,
   "lua.targetVersion": "5.3"

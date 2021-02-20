@@ -1,0 +1,5 @@
+---------------------------------------------------------------
+-- This file contains dummy implementations of EEP functions --
+-- They are used for Intellisense and testing                --
+-- Descriptions are taken from the German Lua manual for EEP --
+---------------------------------------------------------------
