@@ -6,6 +6,72 @@ local function makeRunAfter()
     RunAfter.private = private
   end
 
+  --#region private members
+
+  ---@class Options
+  ---@field immoName string
+  ---@field axisName string
+  private.options = {
+    axisName = 'Timer'
+  }
+
+  --#endregion private members
+
+  --#region private functions
+
+  ---Formats a string or a number into a immoName (string starting with `'#'`).
+  ---This function doesn't check whether the resulting immoName is valid
+  ---@param immoName string | number
+  ---@return string immoName @in the format `'#123'`
+  function private.toImmoName(immoName)
+    if type(immoName) == 'number' then
+      return '#' .. immoName
+    else
+      return immoName
+    end
+  end
+
+  --#endregion private functions
+
+  --#region public functions
+
+  ---@class UserOptions
+  ---@field axisName string
+  ---@field immoName number | string
+
+  ---@param newOptions UserOptions
+  function RunAfter.setOptions(newOptions)
+    if type(newOptions) ~= 'table' then
+      newOptions = {immoName = newOptions}
+    end
+
+    if newOptions.axisName then
+      local axisName = newOptions.axisName
+      assert(type(axisName) == 'string', 'axisName muss ein String sein, aber ist vom Typ ' .. type(axisName))
+      private.options.axisName = axisName
+    end
+    if newOptions.immoName then
+      local immoName = private.toImmoName(newOptions.immoName)
+      assert(
+        type(immoName) == 'string',
+        'immoName muss eine Zahl oder ein String sein, aber ist vom Typ ' .. type(immoName)
+      )
+      local CONTINUOUS_MOVEMENT = 1000
+      local ok = EEPStructureAnimateAxis(immoName, private.options.axisName, CONTINUOUS_MOVEMENT)
+      assert(
+        ok,
+        string.format(
+          'Die Immobilie %s existiert nicht oder hat keine Achse namens %s',
+          immoName,
+          private.options.axisName
+        )
+      )
+      private.options.immoName = immoName
+    end
+  end
+
+  --#endregion public functions
+
   return RunAfter
 end
 
@@ -18,8 +84,9 @@ return setmetatable(
     _LICENSE = 'MIT'
   },
   {
-    __call = function()
+    __call = function(self, options)
       local RunAfter = makeRunAfter()
+      RunAfter.setOptions(options)
       return RunAfter
     end
   }
