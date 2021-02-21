@@ -1,4 +1,7 @@
+---create an instance of RunAfter (so tests are independent of each other)
+---@return RunAfter
 local function makeRunAfter()
+  ---@class RunAfter
   local RunAfter = {}
 
   local private = {}
@@ -6,11 +9,21 @@ local function makeRunAfter()
     RunAfter.private = private
   end
 
-  --#region private members
+  --#region type definitions
 
   ---@class Options
   ---@field immoName string
   ---@field axisName string
+
+  ---@class UserOptions
+  ---@field axisName string
+  ---@field immoName number | string
+
+  --#endregion type definitions
+
+  --#region private members
+
+  ---@type Options
   private.options = {
     axisName = 'Timer'
   }
@@ -34,10 +47,6 @@ local function makeRunAfter()
   --#endregion private functions
 
   --#region public functions
-
-  ---@class UserOptions
-  ---@field axisName string
-  ---@field immoName number | string
 
   ---@param newOptions UserOptions
   function RunAfter.setOptions(newOptions)
@@ -84,6 +93,9 @@ return setmetatable(
     _LICENSE = 'MIT'
   },
   {
+    ---returns an instance of RunAfter, configured with the given options
+    ---@param options UserOptions
+    ---@return RunAfter
     __call = function(self, options)
       local RunAfter = makeRunAfter()
       RunAfter.setOptions(options)

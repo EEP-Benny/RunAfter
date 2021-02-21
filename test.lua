@@ -22,9 +22,12 @@ local function returnFalse()
   return false
 end
 
+---@param options UserOptions
+---@return RunAfter
 local function getRunAfter(options)
   return require('RunAfter_BH2')(options)
 end
+---@type fun(options:UserOptions): RunAfter
 local getRunAfterWithPrivate = withChangedGlobals({EXPOSE_PRIVATE_FOR_TESTING = true}, getRunAfter)
 
 describe(
