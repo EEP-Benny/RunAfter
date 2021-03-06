@@ -10,10 +10,10 @@ Parameter types are annotated in the code using the [EmmyLua style](https://emmy
 
 ## Testing
 
-Unit tests are located in `test.lua`. They use [Lust](https://github.com/bjornbytes/lust), which was copied into the repo for ease of use.
+Unit tests are located in `test.lua`, they use [LuaUnit](https://github.com/bluebird75/luaunit/) and some custom functions.
 
-To execute the tests, make sure to have Lua installed, then open a terminal and run
+To execute the tests, make sure to have Lua installed and LuaUnit available for `require()`, then open a terminal and run
 
 ```sh
-lua test.lua
+lua test.lua -v
 ```

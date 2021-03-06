@@ -1,7 +1,48 @@
-local lust = require('lust')
-local describe, it, expect, before = lust.describe, lust.it, lust.expect, lust.before
+--#region test setup
 
-require('EEPGlobals')
+local lu = require('luaunit')
+-- LuaUnit searches in the global scopes for all functions starting with "Test" or "test".
+-- I prefer tests with speaking names that aren't reordered, so let's monkey-patch this mechanism.
+local tests = {}
+
+---@param name string @name of the test
+---@param fun fun() @test function to run
+local function test(name, fun)
+  name = string.gsub(name, '%.', ': ') -- LuaUnit treats a dot as nesting, which makes things more complicated
+  _ENV[name] = fun
+  table.insert(tests, name)
+end
+
+lu.LuaUnit.collectTests = function()
+  return tests
+end
+
+---@class Spy
+---@field calls table[] @an array of calls to the function, each containing an array of all arguments
+---@field revoke fun() @remove the spy / restore the original function
+
+---Wraps a function so that we can spy on it (= record how often and with which arguments it was called)
+---@param target table @table that holds the function to spy on
+---@param name string @name of the function to spy on
+---@return Spy spy @a spy object containing the call history and a method to remove the spy
+local function spy(target, name)
+  assert(type(target) == 'table', 'spy target must be a table')
+  local originalFunction = target[name]
+  assert(type(originalFunction) == 'function', "can't spy on target[" .. name .. '], must be a function')
+
+  local calls = {}
+  target[name] = function(...)
+    table.insert(calls, {...})
+    return originalFunction(...)
+  end
+
+  return {
+    calls = calls,
+    revoke = function()
+      target[name] = originalFunction
+    end
+  }
+end
 
 local function withChangedGlobals(replacements, fun)
   return function(...)
@@ -22,6 +63,8 @@ local function returnFalse()
   return false
 end
 
+require('EEPGlobals')
+
 ---@param options UserOptions
 ---@return RunAfter
 local function getRunAfter(options)
@@ -30,130 +73,123 @@ end
 ---@type fun(options:UserOptions): RunAfter
 local getRunAfterWithPrivate = withChangedGlobals({EXPOSE_PRIVATE_FOR_TESTING = true}, getRunAfter)
 
-describe(
-  'RunAfter_BH2',
+--#endregion test setup
+
+test(
+  'RunAfter_BH2.should import correctly',
   function()
-    it(
-      'should import correctly',
-      function()
-        local module = require('RunAfter_BH2')
-        expect(module).to.be.a('table')
-        expect(module._DESCRIPTION).to.exist()
-        expect(module._LICENSE).to.exist()
-        expect(module._URL).to.exist()
-        expect(module._VERSION).to.exist()
-        expect(module()).to.be.a('table')
-      end
-    )
-
-    it(
-      'should not expose private variables normally',
-      function()
-        local RunAfter = getRunAfter()
-        expect(RunAfter.private).to_not.exist()
-      end
-    )
-
-    it(
-      'should expose private variables for testing',
-      function()
-        local RunAfter = getRunAfterWithPrivate()
-        expect(RunAfter.private).to.be.a('table')
-      end
-    )
-
-    --#region private functions
-
-    describe(
-      'toImmoName',
-      function()
-        it(
-          'should convert a number to a string',
-          function()
-            local toImmoName = getRunAfterWithPrivate().private.toImmoName
-            expect(toImmoName(10)).to.be('#10')
-          end
-        )
-        it(
-          'should pass through a string',
-          function()
-            local toImmoName = getRunAfterWithPrivate().private.toImmoName
-            expect(toImmoName('#11')).to.be('#11')
-            expect(toImmoName('#11_ImmoName')).to.be('#11_ImmoName')
-          end
-        )
-        it(
-          'should not check that the id is valid',
-          function()
-            local toImmoName = getRunAfterWithPrivate().private.toImmoName
-            expect(toImmoName('invalid ID')).to.be('invalid ID')
-            expect(toImmoName(false)).to.be(false)
-          end
-        )
-      end
-    )
-
-    --#endregion private functions
-
-    --#region public functions
-
-    describe(
-      'setOptions',
-      function()
-        it(
-          'should treat a single value as the immoName',
-          function()
-            local RunAfter = getRunAfterWithPrivate('#1')
-            expect(RunAfter.private.options.immoName).to.be('#1')
-          end
-        )
-
-        describe(
-          'immoName',
-          function()
-            it(
-              'should be copied using toImmoName',
-              function()
-                local RunAfter = getRunAfterWithPrivate()
-                local toImmoNameSpy = lust.spy(RunAfter.private, 'toImmoName')
-                RunAfter.private.options = {}
-                RunAfter.setOptions({immoName = '#123'})
-                expect(toImmoNameSpy).to.equal({{'#123'}})
-                expect(RunAfter.private.options).to.equal({immoName = '#123'})
-              end
-            )
-            it(
-              'should start axis movement',
-              function()
-                local RunAfter = getRunAfterWithPrivate()
-                local EEPStructureAnimateAxisSpy = lust.spy(_ENV, 'EEPStructureAnimateAxis')
-                RunAfter.private.options = {axisName = 'Achse'}
-                RunAfter.setOptions({immoName = '#123'})
-                expect(EEPStructureAnimateAxisSpy).to.equal({{'#123', 'Achse', 1000}})
-              end
-            )
-            it(
-              'should throw an error if immo or axis does not exist',
-              withChangedGlobals(
-                {EEPStructureAnimateAxis = returnFalse},
-                function()
-                  local RunAfter = getRunAfter()
-                  expect(pcall(RunAfter.setOptions, {immoName = '#123'})).to.be(false)
-                end
-              )
-            )
-            it(
-              'should throw an error if immoName has the wrong type',
-              function()
-                local RunAfter = getRunAfter()
-                expect(pcall(RunAfter.setOptions, {immoName = true})).to.be(false)
-              end
-            )
-          end
-        )
-      end
-    )
-
-    --#endregion public functions
+    local module = require('RunAfter_BH2')
+    lu.assertTable(module)
+    lu.assertNotNil(module._DESCRIPTION)
+    lu.assertNotNil(module._LICENSE)
+    lu.assertNotNil(module._URL)
+    lu.assertNotNil(module._VERSION)
+    lu.assertTable(module())
   end
 )
+
+test(
+  'RunAfter_BH2.should not expose private variables normally',
+  function()
+    local RunAfter = getRunAfter()
+    lu.assertNil(RunAfter.private)
+  end
+)
+
+test(
+  'RunAfter_BH2.should expose private variables for testing',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    lu.assertTable(RunAfter.private)
+  end
+)
+
+--#region private functions
+
+test(
+  'toImmoName.should convert a number to a string',
+  function()
+    local toImmoName = getRunAfterWithPrivate().private.toImmoName
+    lu.assertEquals(toImmoName(10), '#10')
+  end
+)
+
+test(
+  'toImmoName.should pass through a string',
+  function()
+    local toImmoName = getRunAfterWithPrivate().private.toImmoName
+    lu.assertEquals(toImmoName('#11'), '#11')
+    lu.assertEquals(toImmoName('#11_ImmoName'), '#11_ImmoName')
+  end
+)
+
+test(
+  'toImmoName.should not check that the id is valid',
+  function()
+    local toImmoName = getRunAfterWithPrivate().private.toImmoName
+    lu.assertEquals(toImmoName('invalid ID'), 'invalid ID')
+    lu.assertEquals(toImmoName(false), false)
+  end
+)
+
+--#endregion private functions
+
+--#region public functions
+
+test(
+  'setOptions.should treat a single value as the immoName',
+  function()
+    local RunAfter = getRunAfterWithPrivate('#1')
+    lu.assertEquals(RunAfter.private.options.immoName, '#1')
+  end
+)
+
+test(
+  'setOptions.immoName.should be copied using toImmoName',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local toImmoNameSpy = spy(RunAfter.private, 'toImmoName')
+    RunAfter.private.options = {}
+    RunAfter.setOptions({immoName = '#123'})
+    lu.assertEquals(toImmoNameSpy.calls, {{'#123'}})
+    lu.assertEquals(RunAfter.private.options, {immoName = '#123'})
+    toImmoNameSpy.revoke()
+  end
+)
+
+test(
+  'setOptions.immoName.should start axis movement',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local EEPStructureAnimateAxisSpy = spy(_ENV, 'EEPStructureAnimateAxis')
+    RunAfter.private.options = {axisName = 'Achse'}
+    RunAfter.setOptions({immoName = '#123'})
+    lu.assertEquals(EEPStructureAnimateAxisSpy.calls, {{'#123', 'Achse', 1000}})
+    EEPStructureAnimateAxisSpy.revoke()
+  end
+)
+
+test(
+  'setOptions.immoName.should throw an error if immo or axis does not exist',
+  withChangedGlobals(
+    {EEPStructureAnimateAxis = returnFalse},
+    function()
+      local RunAfter = getRunAfter()
+      local expectedErrorMsg = 'Die Immobilie #123 existiert nicht oder hat keine Achse namens Timer'
+      lu.assertErrorMsgContains(expectedErrorMsg, RunAfter.setOptions, {immoName = '#123'})
+    end
+  )
+)
+
+test(
+  'setOptions.immoName.should throw an error if immoName has the wrong type',
+  function()
+    local RunAfter = getRunAfter()
+    local expectedErrorMsg = 'immoName muss eine Zahl oder ein String sein, aber ist vom Typ boolean'
+    lu.assertErrorMsgContains(expectedErrorMsg, RunAfter.setOptions, {immoName = true})
+  end
+)
+
+--#endregion public functions
+
+os.exit(lu.LuaUnit.run())
