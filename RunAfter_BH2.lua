@@ -44,6 +44,13 @@ local function makeRunAfter()
     end
   end
 
+  ---Returns the current time (based on the axis position)
+  ---@return number currentTime @current time in seconds
+  function private.getCurrentTime()
+    local _, axisPosition = EEPStructureGetAxis(private.options.immoName, private.options.axisName)
+    return axisPosition
+  end
+
   --#endregion private functions
 
   --#region public functions

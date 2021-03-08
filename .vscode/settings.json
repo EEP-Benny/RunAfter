@@ -6,7 +6,8 @@
   "Lua.runtime.version": "Lua 5.3",
   "Lua.diagnostics.globals": [
     "EXPOSE_PRIVATE_FOR_TESTING",
-    "EEPStructureAnimateAxis"
+    "EEPStructureAnimateAxis",
+    "EEPStructureGetAxis"
   ],
   "lua.format.indentCount": 2,
   "lua.format.singleQuote": true,

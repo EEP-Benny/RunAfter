@@ -13,3 +13,13 @@
 function EEPStructureAnimateAxis(immoName, axisName, position)
   return true
 end
+
+---Ermittelt die Position einer Achse der benannten Immobilie oder des Gleisobjekts
+---**Voraussetzung:** EEP 11.1 Plug-In 1
+---@param immoName string Lua-Name der Immobilie als String
+---@param axisName string Name der Achse
+---@return boolean ok true, wenn Immobilie und Achse existieren oder false, falls mindestens eins von beidem nicht existiert.
+---@return integer axisPosition momentane Position der Achse als Zahl zwischen 0 und 100.
+function EEPStructureGetAxis(immoName, axisName)
+  return true, 20
+end

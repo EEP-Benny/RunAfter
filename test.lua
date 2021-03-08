@@ -59,8 +59,11 @@ local function withChangedGlobals(replacements, fun)
   end
 end
 
-local function returnFalse()
-  return false
+local function functionReturning(...)
+  local returnValues = {...}
+  return function()
+    return table.unpack(returnValues)
+  end
 end
 
 require('EEPGlobals')
@@ -132,6 +135,17 @@ test(
   end
 )
 
+test(
+  'getCurrentTime.should return the current time for a given axis position',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 45)},
+    function()
+      local getCurrentTime = getRunAfterWithPrivate().private.getCurrentTime
+      lu.assertEquals(getCurrentTime(), 45)
+    end
+  )
+)
+
 --#endregion private functions
 
 --#region public functions
@@ -172,7 +186,7 @@ test(
 test(
   'setOptions.immoName.should throw an error if immo or axis does not exist',
   withChangedGlobals(
-    {EEPStructureAnimateAxis = returnFalse},
+    {EEPStructureAnimateAxis = functionReturning(false)},
     function()
       local RunAfter = getRunAfter()
       local expectedErrorMsg = 'Die Immobilie #123 existiert nicht oder hat keine Achse namens Timer'
