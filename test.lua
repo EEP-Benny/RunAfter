@@ -206,6 +206,39 @@ test(
   end
 )
 --#endregion RunAfter.setOptions()
+
+--#region RunAfter.tick()
+test(
+  'tick.should not crash if there are no scheduled tasks',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {}
+    RunAfter.tick()
+  end
+)
+
+test(
+  'tick.should execute only tasks that are due and remove them from the list',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.getCurrentTime = functionReturning(20)
+    local task1 = {time = 10, func = functionReturning(nil)}
+    local task2 = {time = 15, func = functionReturning(nil)}
+    local task3 = {time = 30, func = functionReturning(nil)}
+    local task1FuncSpy = spy(task1, 'func')
+    local task2FuncSpy = spy(task2, 'func')
+    local task3FuncSpy = spy(task3, 'func')
+    RunAfter.private.scheduledTasks = {task3, task2, task1}
+
+    RunAfter.tick()
+
+    lu.assertEquals(task1FuncSpy.calls, {{}}) -- 1 call
+    lu.assertEquals(task2FuncSpy.calls, {{}}) -- 1 call
+    lu.assertEquals(task3FuncSpy.calls, {}) -- 0 calls
+    lu.assertEquals(RunAfter.private.scheduledTasks, {task3})
+  end
+)
+--#endregion RunAfter.tick()
 --#endregion public functions
 
 os.exit(lu.LuaUnit.run())

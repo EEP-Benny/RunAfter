@@ -19,6 +19,11 @@ local function makeRunAfter()
   ---@field axisName string
   ---@field immoName number | string
 
+  ---@class ScheduledTask
+  ---@field time number @absolute time this task should run at
+  ---@field funcAsStr string @the function to execute in string form (this is stored in a slot or tag text)
+  ---@field func function @the function to execute (parsed from funcAsStr)
+
   --#endregion type definitions
 
   --#region private members
@@ -27,6 +32,19 @@ local function makeRunAfter()
   private.options = {
     axisName = 'Timer'
   }
+
+  ---List of all scheduled tasks, sorted by time descending.
+  ---
+  ---The task that will be executed first is at the end of the list, like this:
+  ---```
+  ---{
+  ---  {time = 50, ...},
+  ---  ...
+  ---  {time = 1, ...},
+  ---}
+  ---```
+  ---@type ScheduledTask[]
+  private.scheduledTasks = {}
 
   --#endregion private members
 
@@ -83,6 +101,19 @@ local function makeRunAfter()
         )
       )
       private.options.immoName = immoName
+    end
+  end
+
+  ---Executes due tasks.
+  ---This function needs to be called periodically.
+  function RunAfter.tick()
+    local currentTime = private.getCurrentTime()
+    local indexOfLastTask = #private.scheduledTasks
+    while indexOfLastTask > 0 and private.scheduledTasks[indexOfLastTask].time < currentTime do
+      local task = private.scheduledTasks[indexOfLastTask]
+      private.scheduledTasks[indexOfLastTask] = nil
+      indexOfLastTask = indexOfLastTask - 1
+      task.func()
     end
   end
 
