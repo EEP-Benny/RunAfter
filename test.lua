@@ -108,7 +108,7 @@ test(
 )
 
 --#region private functions
-
+--#region toImmoName()
 test(
   'toImmoName.should convert a number to a string',
   function()
@@ -134,7 +134,9 @@ test(
     lu.assertEquals(toImmoName(false), false)
   end
 )
+--#endregion toImmoName()
 
+--#region getCurrentTime()
 test(
   'getCurrentTime.should return the current time for a given axis position',
   withChangedGlobals(
@@ -145,11 +147,11 @@ test(
     end
   )
 )
-
+--#endregion getCurrentTime()
 --#endregion private functions
 
 --#region public functions
-
+--#region RunAfter.setOptions()
 test(
   'setOptions.should treat a single value as the immoName',
   function()
@@ -190,7 +192,7 @@ test(
     function()
       local RunAfter = getRunAfter()
       local expectedErrorMsg = 'Die Immobilie #123 existiert nicht oder hat keine Achse namens Timer'
-      lu.assertErrorMsgContains(expectedErrorMsg, RunAfter.setOptions, {immoName = '#123'})
+      lu.assertErrorMsgContentEquals(expectedErrorMsg, RunAfter.setOptions, {immoName = '#123'})
     end
   )
 )
@@ -200,10 +202,10 @@ test(
   function()
     local RunAfter = getRunAfter()
     local expectedErrorMsg = 'immoName muss eine Zahl oder ein String sein, aber ist vom Typ boolean'
-    lu.assertErrorMsgContains(expectedErrorMsg, RunAfter.setOptions, {immoName = true})
+    lu.assertErrorMsgContentEquals(expectedErrorMsg, RunAfter.setOptions, {immoName = true})
   end
 )
-
+--#endregion RunAfter.setOptions()
 --#endregion public functions
 
 os.exit(lu.LuaUnit.run())
