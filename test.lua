@@ -148,6 +148,66 @@ test(
   )
 )
 --#endregion getCurrentTime()
+
+--#region insertTask()
+test(
+  'insertTask.should insert into an empty list',
+  function()
+    local newTask = {time = 5}
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {}
+
+    RunAfter.private.insertTask(newTask)
+
+    lu.assertEquals(RunAfter.private.scheduledTasks, {newTask})
+  end
+)
+
+test(
+  'insertTask.should insert at the start of the list',
+  function()
+    local task1 = {time = 10}
+    local task2 = {time = 20}
+    local newTask = {time = 30}
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {task2, task1}
+
+    RunAfter.private.insertTask(newTask)
+
+    lu.assertEquals(RunAfter.private.scheduledTasks, {newTask, task2, task1})
+  end
+)
+
+test(
+  'insertTask.should insert at the end of the list',
+  function()
+    local task1 = {time = 10}
+    local task2 = {time = 20}
+    local newTask = {time = 5}
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {task2, task1}
+
+    RunAfter.private.insertTask(newTask)
+
+    lu.assertEquals(RunAfter.private.scheduledTasks, {task2, task1, newTask})
+  end
+)
+
+test(
+  'insertTask.should insert in the middle of the list',
+  function()
+    local task1 = {time = 10}
+    local task2 = {time = 20}
+    local newTask = {time = 15}
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {task2, task1}
+
+    RunAfter.private.insertTask(newTask)
+
+    lu.assertEquals(RunAfter.private.scheduledTasks, {task2, newTask, task1})
+  end
+)
+--#endregion insertTask()
 --#endregion private functions
 
 --#region public functions
@@ -239,6 +299,24 @@ test(
   end
 )
 --#endregion RunAfter.tick()
+
+--#region RunAfter()
+test(
+  'RunAfter.should insert a task into the task list correctly',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.getCurrentTime = functionReturning(20)
+    local insertTaskSpy = spy(RunAfter.private, 'insertTask')
+
+    RunAfter(10, 'do_something')
+
+    lu.assertEquals(#insertTaskSpy.calls, 1)
+    local createdTask = insertTaskSpy.calls[1][1]
+    lu.assertEquals(createdTask.time, 30)
+    lu.assertEquals(createdTask.funcAsStr, 'do_something()')
+  end
+)
+--#endregion RunAfter()
 --#endregion public functions
 
 os.exit(lu.LuaUnit.run())

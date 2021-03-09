@@ -69,6 +69,17 @@ local function makeRunAfter()
     return axisPosition
   end
 
+  ---inserts a task at the right place into the list of all scheduled tasks
+  ---@param task ScheduledTask
+  function private.insertTask(task)
+    local index = #private.scheduledTasks
+    while index >= 1 and private.scheduledTasks[index].time < task.time do
+      private.scheduledTasks[index + 1] = private.scheduledTasks[index]
+      index = index - 1
+    end
+    private.scheduledTasks[index + 1] = task
+  end
+
   --#endregion private functions
 
   --#region public functions
@@ -117,9 +128,33 @@ local function makeRunAfter()
     end
   end
 
+  ---Registers a task that is executed in the future
+  ---@param seconds number @relative time when the function should be called
+  ---@param funcName string @name of the function to be called
+  ---@vararg any @paramaters for the function call
+  function RunAfter.runAfter(seconds, funcName, ...)
+    local time = private.getCurrentTime() + seconds
+    local params = {...}
+    --TODO: use params
+    local funcString = string.format('%s()', funcName)
+    local func, errMsg = load(funcString)
+    if not func then
+      error(errMsg)
+    end
+    private.insertTask({time = time, funcAsStr = funcString, func = func})
+  end
+
   --#endregion public functions
 
-  return RunAfter
+  return setmetatable(
+    RunAfter,
+    {
+      ---@see RunAfter.runAfter
+      __call = function(self, ...)
+        return RunAfter.runAfter(...)
+      end
+    }
+  )
 end
 
 --#region module metadata
