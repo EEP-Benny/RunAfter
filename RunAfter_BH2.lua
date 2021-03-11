@@ -69,6 +69,26 @@ local function makeRunAfter()
     return axisPosition
   end
 
+  function private.resetTimerAxis()
+    local resetInterval = 60
+    local shouldInsertResetTask = true
+    local _, axisPosition = EEPStructureGetAxis(private.options.immoName, private.options.axisName)
+    local newAxisPosition = axisPosition - resetInterval
+    if newAxisPosition >= 0 then
+      EEPStructureSetAxis(private.options.immoName, private.options.axisName, newAxisPosition)
+      for _, task in ipairs(private.scheduledTasks) do
+        if task.func == private.resetTimerAxis then
+          shouldInsertResetTask = false
+        else
+          task.time = task.time - resetInterval
+        end
+      end
+    end
+    if shouldInsertResetTask then
+      private.insertTask({time = resetInterval, func = private.resetTimerAxis})
+    end
+  end
+
   ---inserts a task at the right place into the list of all scheduled tasks
   ---@param task ScheduledTask
   function private.insertTask(task)

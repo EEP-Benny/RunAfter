@@ -149,6 +149,78 @@ test(
 )
 --#endregion getCurrentTime()
 
+--#region resetTimerAxis()
+test(
+  'resetTimerAxis.should reset the timer axis',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 61)},
+    function()
+      local EEPStructureSetAxisSpy = spy(_ENV, 'EEPStructureSetAxis')
+      getRunAfterWithPrivate().private.resetTimerAxis()
+      lu.assertEquals(EEPStructureSetAxisSpy.calls[1][3], 1)
+    end
+  )
+)
+
+test(
+  'resetTimerAxis.should reduce the time of all tasks',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 61)},
+    function()
+      local RunAfter = getRunAfterWithPrivate()
+      RunAfter.private.scheduledTasks = {{time = 150}, {time = 65}}
+      RunAfter.private.resetTimerAxis()
+      lu.assertTableContains(RunAfter.private.scheduledTasks, {time = 90})
+      lu.assertTableContains(RunAfter.private.scheduledTasks, {time = 5})
+    end
+  )
+)
+
+test(
+  'resetTimerAxis.should add the next reset task',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 61)},
+    function()
+      local RunAfter = getRunAfterWithPrivate()
+      RunAfter.private.resetTimerAxis()
+      lu.assertTableContains(RunAfter.private.scheduledTasks, {time = 60, func = RunAfter.private.resetTimerAxis})
+    end
+  )
+)
+
+test(
+  'resetTimerAxis.should only add a single reset task, even if called multiple times',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 61)},
+    function()
+      local RunAfter = getRunAfterWithPrivate()
+      RunAfter.private.scheduledTasks = {}
+      RunAfter.private.resetTimerAxis()
+      RunAfter.private.resetTimerAxis()
+      lu.assertEquals(RunAfter.private.scheduledTasks, {{time = 60, func = RunAfter.private.resetTimerAxis}})
+    end
+  )
+)
+
+test(
+  'resetTimerAxis.should do nothing except adding the next reset task, if the resetInterval is not yet reached',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 59)},
+    function()
+      local EEPStructureSetAxisSpy = spy(_ENV, 'EEPStructureSetAxis')
+      local RunAfter = getRunAfterWithPrivate()
+      RunAfter.private.scheduledTasks = {{time = 50}}
+      RunAfter.private.resetTimerAxis()
+      lu.assertEquals(
+        RunAfter.private.scheduledTasks,
+        {{time = 60, func = RunAfter.private.resetTimerAxis}, {time = 50}}
+      )
+      lu.assertEquals(EEPStructureSetAxisSpy.calls, {})
+    end
+  )
+)
+--#endregion resetTimerAxis()
+
 --#region insertTask()
 test(
   'insertTask.should insert into an empty list',
