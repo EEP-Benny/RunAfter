@@ -33,14 +33,14 @@ local function makeRunAfter()
     axisName = 'Timer'
   }
 
-  ---List of all scheduled tasks, sorted by time descending.
+  ---List of all scheduled tasks, sorted by time ascending.
   ---
-  ---The task that will be executed first is at the end of the list, like this:
+  ---The task that will be executed first is at the start of the list, like this:
   ---```
   ---{
-  ---  {time = 50, ...},
-  ---  ...
   ---  {time = 1, ...},
+  ---  ...
+  ---  {time = 50, ...},
   ---}
   ---```
   ---@type ScheduledTask[]
@@ -93,7 +93,7 @@ local function makeRunAfter()
   ---@param task ScheduledTask
   function private.insertTask(task)
     local index = #private.scheduledTasks
-    while index >= 1 and private.scheduledTasks[index].time < task.time do
+    while index >= 1 and private.scheduledTasks[index].time > task.time do
       private.scheduledTasks[index + 1] = private.scheduledTasks[index]
       index = index - 1
     end
@@ -139,11 +139,8 @@ local function makeRunAfter()
   ---This function needs to be called periodically.
   function RunAfter.tick()
     local currentTime = private.getCurrentTime()
-    local indexOfLastTask = #private.scheduledTasks
-    while indexOfLastTask > 0 and private.scheduledTasks[indexOfLastTask].time < currentTime do
-      local task = private.scheduledTasks[indexOfLastTask]
-      private.scheduledTasks[indexOfLastTask] = nil
-      indexOfLastTask = indexOfLastTask - 1
+    while private.scheduledTasks[1] ~= nil and private.scheduledTasks[1].time < currentTime do
+      local task = table.remove(private.scheduledTasks, 1)
       task.func()
     end
   end

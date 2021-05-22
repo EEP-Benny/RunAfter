@@ -213,7 +213,7 @@ test(
       RunAfter.private.resetTimerAxis()
       lu.assertEquals(
         RunAfter.private.scheduledTasks,
-        {{time = 60, func = RunAfter.private.resetTimerAxis}, {time = 50}}
+        {{time = 50}, {time = 60, func = RunAfter.private.resetTimerAxis}}
       )
       lu.assertEquals(EEPStructureSetAxisSpy.calls, {})
     end
@@ -236,32 +236,32 @@ test(
 )
 
 test(
-  'insertTask.should insert at the start of the list',
+  'insertTask.should insert at the end of the list',
   function()
     local task1 = {time = 10}
     local task2 = {time = 20}
     local newTask = {time = 30}
     local RunAfter = getRunAfterWithPrivate()
-    RunAfter.private.scheduledTasks = {task2, task1}
+    RunAfter.private.scheduledTasks = {task1, task2}
 
     RunAfter.private.insertTask(newTask)
 
-    lu.assertEquals(RunAfter.private.scheduledTasks, {newTask, task2, task1})
+    lu.assertEquals(RunAfter.private.scheduledTasks, {task1, task2, newTask})
   end
 )
 
 test(
-  'insertTask.should insert at the end of the list',
+  'insertTask.should insert at the start of the list',
   function()
     local task1 = {time = 10}
     local task2 = {time = 20}
     local newTask = {time = 5}
     local RunAfter = getRunAfterWithPrivate()
-    RunAfter.private.scheduledTasks = {task2, task1}
+    RunAfter.private.scheduledTasks = {task1, task2}
 
     RunAfter.private.insertTask(newTask)
 
-    lu.assertEquals(RunAfter.private.scheduledTasks, {task2, task1, newTask})
+    lu.assertEquals(RunAfter.private.scheduledTasks, {newTask, task1, task2})
   end
 )
 
@@ -272,11 +272,11 @@ test(
     local task2 = {time = 20}
     local newTask = {time = 15}
     local RunAfter = getRunAfterWithPrivate()
-    RunAfter.private.scheduledTasks = {task2, task1}
+    RunAfter.private.scheduledTasks = {task1, task2}
 
     RunAfter.private.insertTask(newTask)
 
-    lu.assertEquals(RunAfter.private.scheduledTasks, {task2, newTask, task1})
+    lu.assertEquals(RunAfter.private.scheduledTasks, {task1, newTask, task2})
   end
 )
 --#endregion insertTask()
@@ -360,7 +360,7 @@ test(
     local task1FuncSpy = spy(task1, 'func')
     local task2FuncSpy = spy(task2, 'func')
     local task3FuncSpy = spy(task3, 'func')
-    RunAfter.private.scheduledTasks = {task3, task2, task1}
+    RunAfter.private.scheduledTasks = {task1, task2, task3}
 
     RunAfter.tick()
 
