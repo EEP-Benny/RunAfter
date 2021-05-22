@@ -140,7 +140,8 @@ local function makeRunAfter()
   function RunAfter.tick()
     local currentTime = private.getCurrentTime()
     while private.scheduledTasks[1] ~= nil and private.scheduledTasks[1].time < currentTime do
-      local task = table.remove(private.scheduledTasks, 1)
+      local task = private.scheduledTasks[1]
+      table.remove(private.scheduledTasks, 1)
       task.func()
     end
   end
@@ -148,10 +149,9 @@ local function makeRunAfter()
   ---Registers a task that is executed in the future
   ---@param seconds number @relative time when the function should be called
   ---@param funcName string @name of the function to be called
-  ---@vararg any @paramaters for the function call
-  function RunAfter.runAfter(seconds, funcName, ...)
+  ---@param params any[] @table of paramaters for the function call
+  function RunAfter.runAfter(seconds, funcName, params)
     local time = private.getCurrentTime() + seconds
-    local params = {...}
     --TODO: use params
     local funcString = string.format('%s()', funcName)
     local func, errMsg = load(funcString)
