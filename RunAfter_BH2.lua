@@ -21,8 +21,7 @@ local function makeRunAfter()
 
   ---@class ScheduledTask
   ---@field time number @absolute time this task should run at
-  ---@field funcAsStr string @the function to execute in string form (this is stored in a slot or tag text)
-  ---@field func function @the function to execute (parsed from funcAsStr)
+  ---@field func string|function @the function to execute (if this is a string, the task will be stored in a slot or tag text; if it's a function, it won't)
 
   --#endregion type definitions
 
@@ -142,23 +141,30 @@ local function makeRunAfter()
     while private.scheduledTasks[1] ~= nil and private.scheduledTasks[1].time < currentTime do
       local task = private.scheduledTasks[1]
       table.remove(private.scheduledTasks, 1)
-      task.func()
+      if type(task.func) == 'function' then
+        task.func()
+      else
+        local func, errMsg = load(task.func)
+        if func then
+          func()
+        else
+          error(errMsg)
+        end
+      end
     end
   end
 
   ---Registers a task that is executed in the future
   ---@param seconds number @relative time when the function should be called
-  ---@param funcName string @name of the function to be called
-  ---@param params any[] @table of paramaters for the function call
-  function RunAfter.runAfter(seconds, funcName, params)
+  ---@param func string|function @function to be called or name of the function
+  ---@param params any[] @table of paramaters for the function call, if the function is given as a string
+  function RunAfter.runAfter(seconds, func, params)
     local time = private.getCurrentTime() + seconds
     --TODO: use params
-    local funcString = string.format('%s()', funcName)
-    local func, errMsg = load(funcString)
-    if not func then
-      error(errMsg)
+    if type(func) == 'string' then
+      func = string.format('%s()', func)
     end
-    private.insertTask({time = time, funcAsStr = funcString, func = func})
+    private.insertTask({time = time, func = func})
   end
 
   --#endregion public functions

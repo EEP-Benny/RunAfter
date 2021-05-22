@@ -370,6 +370,25 @@ test(
     lu.assertEquals(RunAfter.private.scheduledTasks, {task3})
   end
 )
+
+test(
+  'tick.should execute a function that is stored as a string',
+  withChangedGlobals(
+    {testFunction = functionReturning(nil)},
+    function()
+      local RunAfter = getRunAfterWithPrivate()
+      RunAfter.private.getCurrentTime = functionReturning(20)
+      local task = {time = 10, func = 'testFunction("TestParam")'}
+      local testFuncSpy = spy(_ENV, 'testFunction')
+      RunAfter.private.scheduledTasks = {task}
+
+      RunAfter.tick()
+
+      lu.assertEquals(testFuncSpy.calls, {{'TestParam'}}) -- 1 call
+    end
+  )
+)
+
 --#endregion RunAfter.tick()
 
 --#region RunAfter()
@@ -385,7 +404,7 @@ test(
     lu.assertEquals(#insertTaskSpy.calls, 1)
     local createdTask = insertTaskSpy.calls[1][1]
     lu.assertEquals(createdTask.time, 30)
-    lu.assertEquals(createdTask.funcAsStr, 'do_something()')
+    lu.assertEquals(createdTask.func, 'do_something()')
   end
 )
 --#endregion RunAfter()
