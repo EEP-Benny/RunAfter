@@ -182,6 +182,7 @@ test(
       local EEPStructureSetAxisSpy = spy(_ENV, 'EEPStructureSetAxis')
       getRunAfterWithPrivate().private.resetTimerAxis()
       lu.assertEquals(EEPStructureSetAxisSpy.calls[1][3], 1)
+      EEPStructureSetAxisSpy.revoke()
     end
   )
 )
@@ -240,6 +241,7 @@ test(
         {{time = 50}, {time = 60, func = RunAfter.private.resetTimerAxis}}
       )
       lu.assertEquals(EEPStructureSetAxisSpy.calls, {})
+      EEPStructureSetAxisSpy.revoke()
     end
   )
 )
@@ -325,7 +327,6 @@ test(
     RunAfter.setOptions({immoName = '#123'})
     lu.assertEquals(toImmoNameSpy.calls, {{'#123'}})
     lu.assertEquals(RunAfter.private.options, {immoName = '#123'})
-    toImmoNameSpy.revoke()
   end
 )
 
