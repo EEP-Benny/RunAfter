@@ -61,6 +61,35 @@ local function makeRunAfter()
     end
   end
 
+  ---Parses a time value given as a string or number.
+  ---
+  ---All the following time values return `5420` seconds:
+  ---* `5420` (number)
+  ---* `"5420"` (numeric string)
+  ---* `"5420s"` (explicit seconds)
+  ---* `"1h30m20s"` (mix of units)
+  ---* `"1h 30m 20s"` (with spaces)
+  ---* `"1.5h20s"` (with decimals)
+  ---* `"90m20s"` (with "overflow")
+  ---@param timeValue string | number
+  ---@return number @the time in seconds
+  function private.toNumberOfSeconds(timeValue)
+    if type(timeValue) == 'number' then
+      return timeValue
+    elseif type(timeValue) == 'string' then
+      local seconds = 0
+      local numberPattern, unitPattern = '%d+%.?%d*', '[hms]?'
+      for match in string.gmatch(timeValue, numberPattern .. unitPattern) do
+        local _, _, numeric, unit = string.find(match, string.format('(%s)(%s)', numberPattern, unitPattern))
+        local number = tonumber(numeric)
+        local multiplier = ({h = 60 * 60, m = 60, s = 1})[unit] or 1
+        seconds = seconds + (number * multiplier)
+      end
+      -- print(timeValue, '-', string.find(timeValue, '(%d+[hms])'))
+      return seconds
+    end
+  end
+
   ---Returns the current time (based on the axis position)
   ---@return number currentTime @current time in seconds
   function private.getCurrentTime()
@@ -155,11 +184,11 @@ local function makeRunAfter()
   end
 
   ---Registers a task that is executed in the future
-  ---@param seconds number @relative time when the function should be called
+  ---@param delay string|number @delay after which the function should be called, either as a number (in seconds) or as a string like "1m20s"
   ---@param func string|function @function to be called or name of the function
   ---@param params any[] @table of paramaters for the function call, if the function is given as a string
-  function RunAfter.runAfter(seconds, func, params)
-    local time = private.getCurrentTime() + seconds
+  function RunAfter.runAfter(delay, func, params)
+    local time = private.getCurrentTime() + private.toNumberOfSeconds(delay)
     --TODO: use params
     if type(func) == 'string' then
       func = string.format('%s()', func)

@@ -136,6 +136,30 @@ test(
 )
 --#endregion toImmoName()
 
+--#region toNumberOfSeconds()
+do
+  local testValues = {
+    -- {"input value", "test description"}
+    {5420, 'a number'},
+    {'5420', 'a numeric string'},
+    {'5420s', 'explicit seconds'},
+    {'1h30m20s', 'a mix of units'},
+    {'1h 30m 20s', 'a string with spaces'},
+    {'1.50h20s', 'decimals'},
+    {'90m20s', 'overflowing units'}
+  }
+  for _, testSpec in ipairs(testValues) do
+    test(
+      string.format('toNumberOfSeconds.should correctly parse %s', testSpec[2]),
+      function()
+        local toNumberOfSeconds = getRunAfterWithPrivate().private.toNumberOfSeconds
+        lu.assertEquals(toNumberOfSeconds(testSpec[1]), 5420)
+      end
+    )
+  end
+end
+--#endregion toNumberOfSeconds()
+
 --#region getCurrentTime()
 test(
   'getCurrentTime.should return the current time for a given axis position',
@@ -392,6 +416,18 @@ test(
 --#endregion RunAfter.tick()
 
 --#region RunAfter()
+test(
+  'RunAfter.should use toNumberOfSeconds() to parse the delay',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local toNumberOfSecondsSpy = spy(RunAfter.private, 'toNumberOfSeconds')
+
+    RunAfter('10s', 'do_something')
+
+    lu.assertEquals(toNumberOfSecondsSpy.calls, {{'10s'}})
+  end
+)
+
 test(
   'RunAfter.should insert a task into the task list correctly',
   function()
