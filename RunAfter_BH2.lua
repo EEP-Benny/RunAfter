@@ -14,6 +14,8 @@ local function makeRunAfter()
   ---@class Options
   ---@field immoName string
   ---@field axisName string
+  ---@field loadFn fun(): string
+  ---@field saveFn fun(content: string)
 
   ---@class UserOptions
   ---@field axisName string
@@ -189,6 +191,28 @@ local function makeRunAfter()
   function private.getCurrentTime()
     local _, axisPosition = EEPStructureGetAxis(private.options.immoName, private.options.axisName)
     return axisPosition
+  end
+
+  function private.loadFromStorage()
+    local stringFromStorage = private.options.loadFn and private.options.loadFn() or ''
+    local fun, errorMessage = load('return ' .. stringFromStorage, stringFromStorage)
+    if fun == nil then
+      error('data from storage is incomplete: ' .. errorMessage)
+    end
+    local compressedTaskList = fun()
+    for index, value in ipairs(compressedTaskList or {}) do
+      private.scheduledTasks[index] = {time = value[1], func = value[2]}
+    end
+  end
+
+  function private.saveToStorage()
+    local compressedTaskList = {}
+    for _, task in ipairs(private.scheduledTasks) do
+      if type(task.func) == 'string' then
+        table.insert(compressedTaskList, {task.time, task.func})
+      end
+    end
+    private.options.saveFn(private.serialize(compressedTaskList))
   end
 
   function private.resetTimerAxis()

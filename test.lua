@@ -269,6 +269,58 @@ test(
 )
 --#endregion getCurrentTime()
 
+--#region loadFromStorage()
+test(
+  'loadFromStorage.should load and parse data from storage',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.options.loadFn = functionReturning('{{10,"do_something()"},{20,"do_something_else()"}}')
+
+    RunAfter.private.loadFromStorage()
+
+    lu.assertEquals(
+      RunAfter.private.scheduledTasks,
+      {{time = 10, func = 'do_something()'}, {time = 20, func = 'do_something_else()'}}
+    )
+  end
+)
+
+test(
+  'loadFromStorage.should not crash if there is no data to load',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.options.loadFn = functionReturning(nil)
+    RunAfter.private.loadFromStorage()
+  end
+)
+
+test(
+  'loadFromStorage.should throw an error if the saved string is incomplete',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.options.loadFn = functionReturning('{{10,"do_something()"}')
+
+    lu.assertErrorMsgContains('data from storage is incomplete', RunAfter.private.loadFromStorage)
+  end
+)
+--#endregion loadFromStorage()
+
+--#region saveToStorage()
+test(
+  'saveToStorage.should serialize and save data to storage',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.scheduledTasks = {{time = 10, func = 'do_something()'}, {time = 20, func = 'do_something_else()'}}
+    RunAfter.private.options.saveFn = functionReturning(nil)
+    local saveFnSpy = spy(RunAfter.private.options, 'saveFn')
+
+    RunAfter.private.saveToStorage()
+
+    lu.assertEquals(saveFnSpy.calls, {{'{{10,"do_something()"},{20,"do_something_else()"}}'}})
+  end
+)
+--#endregion saveToStorage()
+
 --#region resetTimerAxis()
 test(
   'resetTimerAxis.should reset the timer axis',
