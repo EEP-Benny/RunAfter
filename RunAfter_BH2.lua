@@ -203,9 +203,13 @@ local function makeRunAfter()
     for index, value in ipairs(compressedTaskList or {}) do
       private.scheduledTasks[index] = {time = value[1], func = value[2]}
     end
+    private.resetTimerAxis()
   end
 
   function private.saveToStorage()
+    if type(private.options.saveFn) ~= 'function' then
+      return
+    end
     local compressedTaskList = {}
     for _, task in ipairs(private.scheduledTasks) do
       if type(task.func) == 'string' then
@@ -229,6 +233,7 @@ local function makeRunAfter()
           task.time = task.time - resetInterval
         end
       end
+      private.saveToStorage()
     end
     if shouldInsertResetTask then
       private.insertTask({time = resetInterval, func = private.resetTimerAxis})
@@ -244,6 +249,10 @@ local function makeRunAfter()
       index = index - 1
     end
     private.scheduledTasks[index + 1] = task
+    if type(task.func) == 'string' then
+      -- if task.func is a function, it won't get saved anyway
+      private.saveToStorage()
+    end
   end
 
   --#endregion private functions
@@ -279,13 +288,17 @@ local function makeRunAfter()
       )
       private.options.immoName = immoName
     end
+
+    private.loadFromStorage()
   end
 
   ---Executes due tasks.
   ---This function needs to be called periodically.
   function RunAfter.tick()
     local currentTime = private.getCurrentTime()
+    local someTaskWasExecuted = false
     while private.scheduledTasks[1] ~= nil and private.scheduledTasks[1].time < currentTime do
+      someTaskWasExecuted = true
       local task = private.scheduledTasks[1]
       table.remove(private.scheduledTasks, 1)
       if type(task.func) == 'function' then
@@ -298,6 +311,9 @@ local function makeRunAfter()
           error(errMsg)
         end
       end
+    end
+    if someTaskWasExecuted then
+      private.saveToStorage()
     end
   end
 

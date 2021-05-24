@@ -275,6 +275,7 @@ test(
   function()
     local RunAfter = getRunAfterWithPrivate()
     RunAfter.private.options.loadFn = functionReturning('{{10,"do_something()"},{20,"do_something_else()"}}')
+    RunAfter.private.resetTimerAxis = functionReturning(nil)
 
     RunAfter.private.loadFromStorage()
 
@@ -303,6 +304,17 @@ test(
     lu.assertErrorMsgContains('data from storage is incomplete', RunAfter.private.loadFromStorage)
   end
 )
+
+test(
+  'loadFromStorage.should call resetTimerAxis',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local resetTimerAxisSpy = spy(RunAfter.private, 'resetTimerAxis')
+    RunAfter.private.loadFromStorage()
+    lu.assertEquals(#resetTimerAxisSpy.calls, 1)
+  end
+)
+
 --#endregion loadFromStorage()
 
 --#region saveToStorage()
@@ -345,6 +357,19 @@ test(
       RunAfter.private.resetTimerAxis()
       lu.assertTableContains(RunAfter.private.scheduledTasks, {time = 90})
       lu.assertTableContains(RunAfter.private.scheduledTasks, {time = 5})
+    end
+  )
+)
+
+test(
+  'resetTimerAxis.should call saveToStorage',
+  withChangedGlobals(
+    {EEPStructureGetAxis = functionReturning(true, 61)},
+    function()
+      local RunAfter = getRunAfterWithPrivate()
+      local saveToStorageSpy = spy(RunAfter.private, 'saveToStorage')
+      RunAfter.private.resetTimerAxis()
+      lu.assertEquals(#saveToStorageSpy.calls, 1)
     end
   )
 )
@@ -453,6 +478,27 @@ test(
     lu.assertEquals(RunAfter.private.scheduledTasks, {task1, newTask, task2})
   end
 )
+
+test(
+  'insertTask.should call saveToStorage for tasks with a string function',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local saveToStorageSpy = spy(RunAfter.private, 'saveToStorage')
+    RunAfter.private.insertTask({time = 10, func = 'do_something()'})
+    lu.assertEquals(#saveToStorageSpy.calls, 1)
+  end
+)
+
+test(
+  'insertTask.should not call saveToStorage for tasks without a string function',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local saveToStorageSpy = spy(RunAfter.private, 'saveToStorage')
+    RunAfter.private.insertTask({time = 10, func = functionReturning(nil)})
+    lu.assertEquals(#saveToStorageSpy.calls, 0)
+  end
+)
+
 --#endregion insertTask()
 --#endregion private functions
 
@@ -510,6 +556,17 @@ test(
     lu.assertErrorMsgContentEquals(expectedErrorMsg, RunAfter.setOptions, {immoName = true})
   end
 )
+
+test(
+  'setOptions.should load data from storage',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local loadFromStorageSpy = spy(RunAfter.private, 'loadFromStorage')
+    RunAfter.setOptions()
+    lu.assertEquals(#loadFromStorageSpy.calls, 1)
+  end
+)
+
 --#endregion RunAfter.setOptions()
 
 --#region RunAfter.tick()
@@ -560,6 +617,34 @@ test(
       lu.assertEquals(testFuncSpy.calls, {{'TestParam'}}) -- 1 call
     end
   )
+)
+
+test(
+  'tick.should call saveToStorage() once if at least one task was executed',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local saveToStorageSpy = spy(RunAfter.private, 'saveToStorage')
+    RunAfter.private.getCurrentTime = functionReturning(30)
+    local task1 = {time = 10, func = functionReturning(nil)}
+    local task2 = {time = 15, func = functionReturning(nil)}
+    RunAfter.private.scheduledTasks = {task1, task2}
+
+    RunAfter.tick()
+
+    lu.assertEquals(#saveToStorageSpy.calls, 1)
+  end
+)
+
+test(
+  'tick.should not call saveToStorage() if no task was executed',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local saveToStorageSpy = spy(RunAfter.private, 'saveToStorage')
+
+    RunAfter.tick()
+
+    lu.assertEquals(#saveToStorageSpy.calls, 0)
+  end
 )
 
 --#endregion RunAfter.tick()
