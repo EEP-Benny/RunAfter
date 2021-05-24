@@ -524,9 +524,20 @@ test(
     lu.assertEquals(toNumberOfSecondsSpy.calls, {{'10s'}})
   end
 )
+test(
+  'RunAfter.should use serialize() to serialize parameters',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    local serializeSpy = spy(RunAfter.private, 'serialize')
+
+    RunAfter('10s', 'do_something', {1, '2'})
+
+    lu.assertEquals(serializeSpy.calls, {{1}, {'2'}})
+  end
+)
 
 test(
-  'RunAfter.should insert a task into the task list correctly',
+  'RunAfter.should create the correct task without function parameters',
   function()
     local RunAfter = getRunAfterWithPrivate()
     RunAfter.private.getCurrentTime = functionReturning(20)
@@ -538,6 +549,21 @@ test(
     local createdTask = insertTaskSpy.calls[1][1]
     lu.assertEquals(createdTask.time, 30)
     lu.assertEquals(createdTask.func, 'do_something()')
+  end
+)
+test(
+  'RunAfter.should create the correct task with function parameters',
+  function()
+    local RunAfter = getRunAfterWithPrivate()
+    RunAfter.private.getCurrentTime = functionReturning(20)
+    local insertTaskSpy = spy(RunAfter.private, 'insertTask')
+
+    RunAfter(10, 'do_something', {1, 2})
+
+    lu.assertEquals(#insertTaskSpy.calls, 1)
+    local createdTask = insertTaskSpy.calls[1][1]
+    lu.assertEquals(createdTask.time, 30)
+    lu.assertEquals(createdTask.func, 'do_something(1,2)')
   end
 )
 --#endregion RunAfter()

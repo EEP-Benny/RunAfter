@@ -280,12 +280,15 @@ local function makeRunAfter()
   ---Registers a task that is executed in the future
   ---@param delay string|number @delay after which the function should be called, either as a number (in seconds) or as a string like "1m20s"
   ---@param func string|function @function to be called or name of the function
-  ---@param params any[] @table of paramaters for the function call, if the function is given as a string
+  ---@param params? any[] @table of paramaters for the function call, if the function is given as a string
   function RunAfter.runAfter(delay, func, params)
     local time = private.getCurrentTime() + private.toNumberOfSeconds(delay)
-    --TODO: use params
     if type(func) == 'string' then
-      func = string.format('%s()', func)
+      local serializedParams = {}
+      for i, param in ipairs(params or {}) do
+        serializedParams[i] = private.serialize(param)
+      end
+      func = string.format('%s(%s)', func, table.concat(serializedParams, ','))
     end
     private.insertTask({time = time, func = func})
   end
