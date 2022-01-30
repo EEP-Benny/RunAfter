@@ -54,10 +54,18 @@ Parameter types are annotated in the code using the [EmmyLua style](https://emmy
 
 ## Testing
 
-Unit tests are located in `test.lua`, they use [LuaUnit](https://github.com/bluebird75/luaunit/) and some custom functions. Mock implementations of the used EEP functions are located in `EEPGlobals.lua`.
+Unit tests are located in `xyz_test.lua`, they use [LuaUnit](https://github.com/bluebird75/luaunit/) and some custom functions defined in `testSetup.lua`. Mock implementations of the used EEP functions are located in `EEPGlobals.lua`.
 
 To execute the tests, make sure to have Lua installed and LuaUnit available for `require()`, then open a terminal and run
 
 ```sh
-lua test.lua -v
+lua testAll.lua -v
+```
+
+`-v` enables verbose output.
+
+To execute only the tests for RunAfter_BH2, run
+
+```sh
+lua RunAfter_BH2_test.lua -v
 ```

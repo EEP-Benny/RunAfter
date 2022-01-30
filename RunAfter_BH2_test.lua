@@ -1,70 +1,12 @@
 --#region test setup
 
 local lu = require('luaunit')
--- LuaUnit searches in the global scopes for all functions starting with "Test" or "test".
--- I prefer tests with speaking names that aren't reordered, so let's monkey-patch this mechanism.
-local tests = {}
-
----@param name string @name of the test
----@param fun fun() @test function to run
-local function test(name, fun)
-  name = string.gsub(name, '%.', ': ') -- LuaUnit treats a dot as nesting, which makes things more complicated
-  _ENV[name] = fun
-  table.insert(tests, name)
-end
-
-lu.LuaUnit.collectTests = function()
-  return tests
-end
-
----@class Spy
----@field calls table[] @an array of calls to the function, each containing an array of all arguments
----@field revoke fun() @remove the spy / restore the original function
-
----Wraps a function so that we can spy on it (= record how often and with which arguments it was called)
----@param target table @table that holds the function to spy on
----@param name string @name of the function to spy on
----@return Spy spy @a spy object containing the call history and a method to remove the spy
-local function spy(target, name)
-  assert(type(target) == 'table', 'spy target must be a table')
-  local originalFunction = target[name]
-  assert(type(originalFunction) == 'function', "can't spy on target[" .. name .. '], must be a function')
-
-  local calls = {}
-  target[name] = function(...)
-    table.insert(calls, {...})
-    return originalFunction(...)
-  end
-
-  return {
-    calls = calls,
-    revoke = function()
-      target[name] = originalFunction
-    end
-  }
-end
-
-local function withChangedGlobals(replacements, fun)
-  return function(...)
-    local savedValues = {}
-    for varname, value in pairs(replacements) do
-      savedValues[varname] = _ENV[varname]
-      _ENV[varname] = value
-    end
-    local returnValue = fun(...)
-    for varname, _ in pairs(replacements) do
-      _ENV[varname] = savedValues[varname]
-    end
-    return returnValue
-  end
-end
-
-local function functionReturning(...)
-  local returnValues = {...}
-  return function()
-    return table.unpack(returnValues)
-  end
-end
+local testSetup = require('testSetup')
+local test = testSetup.test
+local functionReturning = testSetup.functionReturning
+local withChangedGlobals = testSetup.withChangedGlobals
+local spy = testSetup.spy
+local finish = testSetup.finish
 
 require('EEPGlobals')
 
@@ -159,102 +101,6 @@ do
   end
 end
 --#endregion toNumberOfSeconds()
-
---#region serialize()
-test(
-  'serialize.should correctly serialize nil, booleans and numbers',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize(nil), 'nil')
-    lu.assertEquals(serialize(true), 'true')
-    lu.assertEquals(serialize(false), 'false')
-    lu.assertEquals(serialize(1), '1')
-    lu.assertEquals(serialize(-1.5), '-1.5')
-  end
-)
-
-test(
-  'serialize.should correctly serialize strings',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize('simple string'), '"simple string"')
-    lu.assertEquals(serialize('new\nline'), '"new\\nline"')
-    lu.assertEquals(serialize("\"double\" and 'single' quotes"), "\"\\\"double\\\" and 'single' quotes\"")
-  end
-)
-
-test(
-  'serialize.should serialize tables with numeric indices in array form',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize({1, 2, 3, 4, 5}), '{1,2,3,4,5}')
-    lu.assertEquals(serialize({'a', 'b', 'c'}), '{"a","b","c"}')
-  end
-)
-
-test(
-  'serialize.should serialize tables with non-continuous numeric indices',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize({[1] = 1, [2] = 2, [4] = 4}), '{1,2,[4]=4}')
-  end
-)
-
-test(
-  'serialize.should serialize tables with simple string indices using shorthand notation',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize({a = 1}), '{a=1}')
-    lu.assertEquals(serialize({['B_1'] = 1}), '{B_1=1}')
-  end
-)
-
-test(
-  'serialize.should serialize tables with non-identifier-indices using bracket notation',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize({['nil'] = 1}), '{["nil"]=1}')
-    lu.assertEquals(serialize({['with spaces'] = 2}), '{["with spaces"]=2}')
-  end
-)
-
-test(
-  'serialize.should serialize tables with numeric indices before string indices',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    lu.assertEquals(serialize({1, a = 2}), '{1,a=2}')
-  end
-)
-
-test(
-  "serialize.should serialize tables with multiple references to the same table as long as they don't recurse",
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    local tbl1 = {1}
-    local tbl2 = {tbl1, tbl1, [tbl1] = tbl1}
-    lu.assertEquals(serialize(tbl2), '{{1},{1},[{1}]={1}}')
-  end
-)
-
-test(
-  'serialize.should throw an error for recursive tables',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    local tbl = {}
-    tbl.tbl = tbl
-    lu.assertErrorMsgContentEquals('cannot serialize recursive tables', serialize, tbl)
-  end
-)
-
-test(
-  'serialize.should throw an error for unsupported types',
-  function()
-    local serialize = getRunAfterWithPrivate().private.serialize
-    local expectedMessage = 'serializing values of type function is not supported'
-    lu.assertErrorMsgContentEquals(expectedMessage, serialize, functionReturning(nil))
-  end
-)
---#endregion serialize()
 
 --#region getCurrentTime()
 test(
@@ -662,14 +508,16 @@ test(
   end
 )
 test(
-  'RunAfter.should use serialize() to serialize parameters',
+  'RunAfter.should use SerializationHelper.serialize() to serialize parameters',
   function()
-    local RunAfter = getRunAfterWithPrivate()
-    local serializeSpy = spy(RunAfter.private, 'serialize')
+    local RunAfter = getRunAfter()
+    local serializeSpy = spy(require('SerializationHelper_BH2'), 'serialize')
 
     RunAfter('10s', 'do_something', {1, '2'})
 
     lu.assertEquals(serializeSpy.calls, {{1}, {'2'}})
+
+    serializeSpy.revoke()
   end
 )
 
@@ -706,4 +554,4 @@ test(
 --#endregion RunAfter()
 --#endregion public functions
 
-os.exit(lu.LuaUnit.run())
+finish()

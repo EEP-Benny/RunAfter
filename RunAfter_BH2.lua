@@ -1,3 +1,5 @@
+local SerializationHelper = require('SerializationHelper_BH2')
+
 ---create an instance of RunAfter (so tests are independent of each other)
 ---@return RunAfter
 local function makeRunAfter()
@@ -92,100 +94,6 @@ local function makeRunAfter()
     end
   end
 
-  ---Returns a string representation of the given `value`, which is parsable by Lua
-  ---@param value any
-  ---@return string
-  function private.serialize(value)
-    ---all keywords reserved by Lua, taken from the manual
-    ---@type table<string,boolean|nil>
-    local reservedKeywords = {
-      ['and'] = true,
-      ['break'] = true,
-      ['do'] = true,
-      ['else'] = true,
-      ['elseif'] = true,
-      ['end'] = true,
-      ['false'] = true,
-      ['for'] = true,
-      ['function'] = true,
-      ['goto'] = true,
-      ['if'] = true,
-      ['in'] = true,
-      ['local'] = true,
-      ['nil'] = true,
-      ['not'] = true,
-      ['or'] = true,
-      ['repeat'] = true,
-      ['return'] = true,
-      ['then'] = true,
-      ['true'] = true,
-      ['until'] = true,
-      ['while'] = true
-    }
-    ---checks whether `key` is an identifier according to the Lua specification (§3.1)
-    ---@param key any
-    ---@return boolean
-    local function isIdentifier(key)
-      if type(key) ~= 'string' then
-        return false
-      elseif reservedKeywords[key] then
-        return false
-      elseif string.match(key, '^[_%a][_%d%a]*$') then
-        -- "any string of letters, digits, and underscores, not beginning with a digit"
-        return true
-      else
-        return false
-      end
-    end
-
-    local function serializeRecursively(valueToSerialize, alreadyVisited)
-      local serializers = {
-        ['nil'] = tostring,
-        boolean = tostring,
-        number = tostring,
-        string = function(str)
-          -- use %q-formatting, and replace escaped linebreaks with \n
-          -- extra parentheses to trim the return values of gsub
-          return (string.gsub(string.format('%q', str), '\\\n', '\\n'))
-        end,
-        table = function(tbl)
-          if alreadyVisited[tbl] then
-            error('cannot serialize recursive tables')
-          end
-          alreadyVisited[tbl] = true
-          local serializedSegments = {}
-          local visitedByIpairs = {}
-          for i, v in ipairs(tbl) do
-            visitedByIpairs[i] = true
-            table.insert(serializedSegments, serializeRecursively(v, alreadyVisited))
-          end
-          for k, v in pairs(tbl) do
-            if not visitedByIpairs[k] then
-              local serializedValue = serializeRecursively(v, alreadyVisited)
-              local segment
-              if isIdentifier(k) then
-                segment = string.format('%s=%s', k, serializedValue)
-              else
-                segment = string.format('[%s]=%s', serializeRecursively(k, alreadyVisited), serializedValue)
-              end
-              table.insert(serializedSegments, segment)
-            end
-          end
-          alreadyVisited[tbl] = nil
-          return string.format('{%s}', table.concat(serializedSegments, ','))
-        end
-      }
-
-      local serializer = serializers[type(valueToSerialize)]
-      if serializer == nil then
-        error(string.format('serializing values of type %s is not supported', type(valueToSerialize)))
-      end
-      return serializer(valueToSerialize)
-    end
-
-    return serializeRecursively(value, {})
-  end
-
   ---Returns the current time (based on the axis position)
   ---@return number currentTime @current time in seconds
   function private.getCurrentTime()
@@ -216,7 +124,7 @@ local function makeRunAfter()
         table.insert(compressedTaskList, {task.time, task.func})
       end
     end
-    private.options.saveFn(private.serialize(compressedTaskList))
+    private.options.saveFn(SerializationHelper.serialize(compressedTaskList))
   end
 
   function private.resetTimerAxis()
@@ -326,7 +234,7 @@ local function makeRunAfter()
     if type(func) == 'string' then
       local serializedParams = {}
       for i, param in ipairs(params or {}) do
-        serializedParams[i] = private.serialize(param)
+        serializedParams[i] = SerializationHelper.serialize(param)
       end
       func = string.format('%s(%s)', func, table.concat(serializedParams, ','))
     end
