@@ -33,3 +33,21 @@ end
 function EEPStructureGetAxis(immoName, axisName)
   return true, 20
 end
+
+---Weist einer Immobilie oder einem Landschaftselement einen sog. Tag-Text zu
+---**Voraussetzung:** EEP 15
+---@param immoName string Lua-Name der Immobilie als String
+---@param textToSave string zu speichernder Text
+---@return boolean ok true, wenn die Immobilie existiert
+function EEPStructureSetTagText(immoName, textToSave)
+  return true
+end
+
+---Liest den Tag-Text einer Immobilie oder eines Landschaftselementes aus
+---**Voraussetzung:** EEP 15
+---@param immoName string Lua-Name der Immobilie als String
+---@return boolean ok true, wenn die Immobilie existiert
+---@return string loadedText Tag-Text, welcher der Immobilie oder dem Landschaftselement mitgegeben wurde
+function EEPStructureGetTagText(immoName)
+  return true, 'textFromTagText'
+end
